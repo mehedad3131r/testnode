@@ -26,12 +26,14 @@ const paymentSchema = Schema({
 });
 const userSchema = Schema({
   _id: Schema.Types.ObjectId,
+  email: String,
   name: String,
+  uid: Number,
   balance: Number,
   firstname: String,
   lastname: String,
   password: String,
-  email: String,
+  role: String,
   username: { type: String, unique: true },
   payments: [paymentSchema]
 });
@@ -71,6 +73,42 @@ async function main() {
   console.log('db connected')
 }
 
+async function seeder() {
+  await User.find().remove().exec();
+  await Payment.find().remove().exec();
+  let userseed = await User.findOne({ username: 'mehrdadr133' }).exec();
+  console.log(userseed)
+  if(userseed){
+    console.log('we find correct user')
+  }else{
+    const author = new User({
+      _id: new mongoose.Types.ObjectId(),
+      name: 'Ian Flddeming',
+      balance: 50,
+      uid: 1,
+      firstname: 'mehdrdad',
+      lastname: 'ddddd',
+      password: 'Strindg',
+      role: 'admin',
+      email: 'String@sd.cdd',
+      username: 'mehrdadr133'
+    });
+  
+    const story1 = new Payment({
+      title: 'mehrdad',
+      author: author._id,    // assign the _id from the person
+      amount: 20,
+      coin: 'BTC',
+      status: 'started'
+    });
+    author.payments.push(story1);
+    author.save();
+    console.log('user created')
+  }
+
+}
+
+seeder();
 
 
 /*
@@ -108,12 +146,13 @@ passport.use(
       try {
         const user = new User({
           _id: new mongoose.Types.ObjectId(),
+          email: email,
+          uid: 1,
           name: email,
           balance: 50,
           firstname: email,
           lastname: email,
           password: password,
-          email: email,
           username: email
         });
         // const user = await User.create({ email, password });
@@ -130,13 +169,13 @@ passport.use(
   'login',
   new localStrategy(
     {
-      usernameField: 'username',
+      usernameField: 'email',
       passwordField: 'password'
     },
-    async (username, password, done) => {
+    async (email, password, done) => {
       try {
-        const user = await User.findOne({ username });
-
+        const user = await User.findOne({ email: email }).exec();
+        console.log(user)
         if (!user) {
           return done(null, false, { message: 'User not found' });
         }
@@ -163,6 +202,35 @@ app.get('/allusers', async function (req, res) {
   let allUsers = await User.find();
   let json = { "result": 'success', "data": allUsers }
   res.send(json)
+})
+
+app.get('/alluserspayment', async function (req, res) {
+  let user = await User.findOne({ uid: req.query.uid }).exec();
+  if(!user){
+    throw 'usernot found';
+  }
+  // var data
+  if(user.role == 'admin'){
+    let allpayments = await Payment.find({}, function (err, docs) {
+      if (err){
+          console.log(err);
+      }
+      else{
+          console.log("First function call : ", docs);
+      }
+  });
+    console.log(111111)
+    console.log(allpayments)
+    let admindata = { "result": 'success', "data": allpayments }
+    res.send(admindata)
+  }else{
+    let allpaymentsforuser = await Payment.find({ author: user._id }).exec();
+    let userdata = { "result": 'success', "data": allpaymentsforuser }
+    console.log(2222222)
+    console.log(allpaymentsforuser)
+    res.send(userdata)
+  }
+  
 })
 
 // const router = express.Router();
